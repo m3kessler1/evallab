@@ -25,9 +25,17 @@ cp .env.example .env
 ```
 
 Edit `.env` with your keys:
-- `OPENAI_API_KEY` — Get from [platform.openai.com](https://platform.openai.com)
+- `LLM_PROVIDER` — Set to `openai`, `moonshot`, or `openrouter`
+- `OPENAI_API_KEY` — Get from [platform.openai.com](https://platform.openai.com) when using `openai`
+- `MOONSHOT_API_KEY` — Get from [platform.moonshot.ai](https://platform.moonshot.ai) when using `moonshot`
+- `OPENROUTER_API_KEY` — Get from [openrouter.ai/keys](https://openrouter.ai/keys) when using `openrouter`
 - `LANGFUSE_SECRET_KEY` — Get from [cloud.langfuse.com](https://cloud.langfuse.com)
 - `LANGFUSE_PUBLIC_KEY` — Get from [cloud.langfuse.com](https://cloud.langfuse.com)
+
+Provider-specific model settings are available in `.env.example`:
+- `OPENAI_MODEL`
+- `MOONSHOT_MODEL`
+- `OPENROUTER_MODEL`
 
 ### 3. Verify Setup
 

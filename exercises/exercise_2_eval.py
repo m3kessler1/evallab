@@ -13,13 +13,28 @@ TODO:
 """
 
 import pytest
-from deepeval import assert_test
-from deepeval.test_case import LLMTestCase
+import sys
+from pathlib import Path
 
 # TODO: Import the metrics you want to use
 # from deepeval.metrics import AnswerRelevancyMetric, FaithfulnessMetric
 
-from src.agent import build_oak_brook_support_agent
+
+def _load_deepeval():
+    """Import DeepEval lazily to avoid pre-import plugin rewrite warnings."""
+    from deepeval import assert_test
+    from deepeval.test_case import LLMTestCase
+    return assert_test, LLMTestCase
+
+
+def _build_oak_brook_support_agent():
+    """Import and build the support agent lazily during test execution."""
+    try:
+        from src.agent import build_oak_brook_support_agent
+    except ModuleNotFoundError:
+        sys.path.append(str(Path(__file__).resolve().parents[1]))
+        from src.agent import build_oak_brook_support_agent
+    return build_oak_brook_support_agent()
 
 
 # TODO: Initialize metrics with specific thresholds
@@ -73,7 +88,7 @@ KNOWLEDGE_BASE_CONTEXT = [
 # Starter test without DeepEval (remove this when you implement above)
 def test_agent_runs():
     """Basic smoke test to ensure agent executes without errors."""
-    executor = build_oak_brook_support_agent()
+    executor = _build_oak_brook_support_agent()
     response = executor.invoke({"input": "What services do you offer?"})
     assert "output" in response
     assert len(response["output"]) > 0

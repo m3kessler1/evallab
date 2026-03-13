@@ -13,13 +13,17 @@ TODO:
 
 import os
 import uuid
+import sys
+from pathlib import Path
 from dotenv import load_dotenv
+from langfuse import get_client
+from langfuse.langchain import CallbackHandler
 
-# TODO: Import Langfuse CallbackHandler
-# from langfuse.langchain import CallbackHandler
-# from langfuse import Langfuse
-
-from src.agent import build_oak_brook_support_agent
+try:
+    from src.agent import build_oak_brook_support_agent
+except ModuleNotFoundError:
+    sys.path.append(str(Path(__file__).resolve().parents[1]))
+    from src.agent import build_oak_brook_support_agent
 
 load_dotenv()
 
@@ -38,36 +42,28 @@ def execute_with_tracing(user_input: str, user_id: str = "lab-user"):
     # Build the agent executor
     executor = build_oak_brook_support_agent()
     
-    # TODO: Create a unique session ID
-    # session_id = f"session_{uuid.uuid4().hex[:8]}"
-    
-    # TODO: Initialize the Langfuse CallbackHandler
-    # langfuse_handler = CallbackHandler()
-    
-    # TODO: Create config with callbacks and metadata
-    # config = {
-    #     "callbacks": [langfuse_handler],
-    #     "metadata": {
-    #         "langfuse_user_id": user_id,
-    #         "langfuse_session_id": session_id,
-    #         "langfuse_tags": ["oak_brook_triage", "live_lab_exercise"]
-    #     }
-    # }
+    session_id = f"session_{uuid.uuid4().hex[:8]}"
+    langfuse = get_client()
+    langfuse_handler = CallbackHandler()
+
+    config = {
+        "callbacks": [langfuse_handler],
+        "metadata": {
+            "langfuse_user_id": user_id,
+            "langfuse_session_id": session_id,
+            "langfuse_tags": ["oak_brook_triage", "live_lab_exercise"],
+        },
+    }
     
     try:
-        # TODO: Pass config to invoke()
-        # response = executor.invoke({"input": user_input}, config=config)
-        
-        # For now, just run without tracing (remove this when you add tracing)
-        response = executor.invoke({"input": user_input})
+        response = executor.invoke({"input": user_input}, config=config)
         output = response["output"]
         
     except Exception as e:
         output = f"System Error: {str(e)}"
-    
-    # TODO: Flush the handler to ensure traces are sent
-    # finally:
-    #     langfuse_handler.flush()
+    finally:
+        # Best practice for scripts/short-lived processes: flush buffered events.
+        langfuse.flush()
     
     return output
 
@@ -99,7 +95,19 @@ Customer inquiry: OAK-VIP-9999 needs help with network issues."""
 
 if __name__ == "__main__":
     # Check for required environment variables
-    required_vars = ["OPENAI_API_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_PUBLIC_KEY"]
+    provider = os.getenv("LLM_PROVIDER", "openai").strip().lower()
+    provider_key_map = {
+        "openai": "OPENAI_API_KEY",
+        "moonshot": "MOONSHOT_API_KEY",
+        "openrouter": "OPENROUTER_API_KEY",
+    }
+    llm_key = provider_key_map.get(provider)
+
+    if llm_key is None:
+        print(f"❌ Unsupported LLM_PROVIDER '{provider}'. Use openai, moonshot, or openrouter.")
+        exit(1)
+
+    required_vars = [llm_key, "LANGFUSE_SECRET_KEY", "LANGFUSE_PUBLIC_KEY"]
     missing = [var for var in required_vars if not os.getenv(var)]
     
     if missing:
