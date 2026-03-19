@@ -40,7 +40,7 @@ Provider-specific model settings are available in `.env.example`:
 ### 3. Verify Setup
 
 ```bash
-python -c "import langchain, langfuse, deepeval; print('✅ All packages installed')"
+python -c "import langchain, langfuse, deepeval, pytest; print('✅ All packages installed')"
 ```
 
 ## 📁 Lab Structure
@@ -96,7 +96,7 @@ Complete `exercises/exercise_1_trace.py`:
 Complete `exercises/exercise_2_eval.py`:
 - Implement Answer Relevancy metric
 - Implement Faithfulness metric
-- Run: `deepeval test run tests/test_agent.py`
+- Run: `deepeval test run exercises/exercise_2_eval.py -v`
 
 ## 🔑 Key Concepts
 

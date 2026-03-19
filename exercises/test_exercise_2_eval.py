@@ -16,8 +16,13 @@ import pytest
 import sys
 from pathlib import Path
 
-# TODO: Import the metrics you want to use
-# from deepeval.metrics import AnswerRelevancyMetric, FaithfulnessMetric
+
+from deepeval.metrics import AnswerRelevancyMetric, FaithfulnessMetric
+try:
+    from src.agent import build_oak_brook_support_agent
+except ModuleNotFoundError:
+    sys.path.append(str(Path(__file__).resolve().parents[1]))
+    from src.agent import build_oak_brook_support_agent
 
 
 def _load_deepeval():
@@ -37,9 +42,8 @@ def _build_oak_brook_support_agent():
     return build_oak_brook_support_agent()
 
 
-# TODO: Initialize metrics with specific thresholds
-# answer_relevancy = AnswerRelevancyMetric(threshold=0.7)
-# faithfulness = FaithfulnessMetric(threshold=1.0)
+answer_relevancy = AnswerRelevancyMetric(threshold=0.7)
+faithfulness = FaithfulnessMetric(threshold=1.0)
 
 
 # Knowledge base context for faithfulness evaluation
@@ -52,44 +56,46 @@ KNOWLEDGE_BASE_CONTEXT = [
 ]
 
 
-# TODO: Implement the test function
-# @pytest.mark.parametrize(
-#     "user_query,expected_topics",
-#     [
-#         ("What healthcare IT services do you offer?", ["HIPAA", "healthcare", "patient data"]),
-#         ("Tell me about cybersecurity", ["firewalls", "threat detection", "vulnerability"]),
-#         ("Do you do cloud migration?", ["cloud", "migration", "AWS", "Azure"]),
-#     ]
-# )
-# def test_oak_brook_support_agent_quality(user_query, expected_topics):
-#     """
-#     Test the agent's output quality using DeepEval metrics.
-#     
-#     This test evaluates:
-#     - Answer Relevancy: Does the answer address the user's question?
-#     - Faithfulness: Is the answer grounded in the knowledge base?
-#     """
-#     # Build and run the agent
-#     executor = build_oak_brook_support_agent()
-#     response = executor.invoke({"input": user_query})
-#     actual_output = response["output"]
-#     
-#     # Create the test case
-#     test_case = LLMTestCase(
-#         input=user_query,
-#         actual_output=actual_output,
-#         retrieval_context=KNOWLEDGE_BASE_CONTEXT
-#     )
-#     
-#     # Assert against the metrics
-#     assert_test(test_case, [answer_relevancy, faithfulness])
+@pytest.mark.parametrize(
+    "user_query,expected_topics",
+    [
+        ("What healthcare IT services do you offer?",
+         ["HIPAA", "healthcare", "patient data"]),
+        ("Tell me about cybersecurity", [
+            "firewalls", "threat detection", "vulnerability"]),
+        ("Do you do cloud migration?", [
+            "cloud", "migration", "AWS", "Azure"]),
+    ]
+)
+def test_oak_brook_support_agent_quality(user_query, expected_topics):
+    """
+    Test the agent's output quality using DeepEval metrics.
+
+    This test evaluates:
+    - Answer Relevancy: Does the answer address the user's question?
+    - Faithfulness: Is the answer grounded in the knowledge base?
+    """
+    # Build and run the agent
+    executor = build_oak_brook_support_agent()
+    response = executor.invoke({"input": user_query})
+    actual_output = response["output"]
+
+    # Create the test case
+    test_case = test_agent_runs(
+        input=user_query,
+        actual_output=actual_output,
+        retrieval_context=KNOWLEDGE_BASE_CONTEXT
+    )
+
+    # Assert against the metrics
+    assert_test(test_case, [answer_relevancy, faithfulness])
 
 
 # Starter test without DeepEval (remove this when you implement above)
-def test_agent_runs():
+def test_agent_runs(query, actual_output="", retrieval_context=None):
     """Basic smoke test to ensure agent executes without errors."""
     executor = _build_oak_brook_support_agent()
-    response = executor.invoke({"input": "What services do you offer?"})
+    response = executor.invoke({"input": query})
     assert "output" in response
     assert len(response["output"]) > 0
 
@@ -98,9 +104,9 @@ if __name__ == "__main__":
     # Run with verbose output
     print("🧪 Running DeepEval tests...")
     print("=" * 50)
-    
+
     # When ready, run with:
     # deepeval test run exercises/exercise_2_eval.py -v
-    
+
     # For now, run basic pytest:
     pytest.main([__file__, "-v"])
