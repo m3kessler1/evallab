@@ -75,13 +75,16 @@ def test_oak_brook_support_agent_quality(user_query, expected_topics):
     - Answer Relevancy: Does the answer address the user's question?
     - Faithfulness: Is the answer grounded in the knowledge base?
     """
+    # Import DeepEval components
+    assert_test, LLMTestCase = _load_deepeval()
+    
     # Build and run the agent
     executor = build_oak_brook_support_agent()
     response = executor.invoke({"input": user_query})
     actual_output = response["output"]
 
     # Create the test case
-    test_case = test_agent_runs(
+    test_case = LLMTestCase(
         input=user_query,
         actual_output=actual_output,
         retrieval_context=KNOWLEDGE_BASE_CONTEXT
@@ -92,10 +95,11 @@ def test_oak_brook_support_agent_quality(user_query, expected_topics):
 
 
 # Starter test without DeepEval (remove this when you implement above)
-def test_agent_runs(query, actual_output="", retrieval_context=None):
+def test_agent_runs():
     """Basic smoke test to ensure agent executes without errors."""
     executor = _build_oak_brook_support_agent()
-    response = executor.invoke({"input": query})
+    test_query = "What healthcare IT services do you offer?"
+    response = executor.invoke({"input": test_query})
     assert "output" in response
     assert len(response["output"]) > 0
 
