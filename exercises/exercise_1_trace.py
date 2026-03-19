@@ -31,17 +31,17 @@ load_dotenv()
 def execute_with_tracing(user_input: str, user_id: str = "lab-user"):
     """
     Execute the agent with Langfuse observability.
-    
+
     Args:
         user_input: The customer's support query
         user_id: Identifier for the user (for trace grouping)
-    
+
     Returns:
         The agent's response string
     """
     # Build the agent executor
     executor = build_oak_brook_support_agent()
-    
+
     session_id = f"session_{uuid.uuid4().hex[:8]}"
     langfuse = get_client()
     langfuse_handler = CallbackHandler()
@@ -54,28 +54,28 @@ def execute_with_tracing(user_input: str, user_id: str = "lab-user"):
             "langfuse_tags": ["oak_brook_triage", "live_lab_exercise"],
         },
     }
-    
+
     try:
         response = executor.invoke({"input": user_input}, config=config)
         output = response["output"]
-        
+
     except Exception as e:
         output = f"System Error: {str(e)}"
     finally:
         # Best practice for scripts/short-lived processes: flush buffered events.
         langfuse.flush()
-    
+
     return output
 
 
 def test_vip_contradiction():
     """
     Test case that demonstrates the 'VIP Contradiction' bug.
-    
+
     This prompt creates a logical contradiction that causes the agent to loop:
     - The agent MUST check warranty status
     - But it's FORBIDDEN to use tools for VIP customers
-    
+
     View the resulting trace in Langfuse to see the infinite loop in action!
     """
     contradictory_prompt = """You are a Customer Support Triage Agent.
@@ -88,9 +88,10 @@ Customer inquiry: OAK-VIP-9999 needs help with network issues."""
 
     print("🧪 Testing VIP Contradiction Bug...")
     print("This should cause an infinite loop. Watch the trace in Langfuse!\n")
-    
-    result = execute_with_tracing(contradictory_prompt, user_id="lab-contradiction-test")
-    print(f"\nResult: {result}")
+
+    result = execute_with_tracing(
+        contradictory_prompt, user_id="lab-contradiction-test")
+    return result
 
 
 if __name__ == "__main__":
@@ -104,24 +105,22 @@ if __name__ == "__main__":
     llm_key = provider_key_map.get(provider)
 
     if llm_key is None:
-        print(f"❌ Unsupported LLM_PROVIDER '{provider}'. Use openai, moonshot, or openrouter.")
+        print(
+            f"❌ Unsupported LLM_PROVIDER '{provider}'. Use openai, moonshot, or openrouter.")
         exit(1)
 
     required_vars = [llm_key, "LANGFUSE_SECRET_KEY", "LANGFUSE_PUBLIC_KEY"]
     missing = [var for var in required_vars if not os.getenv(var)]
-    
+
     if missing:
         print(f"❌ Missing environment variables: {', '.join(missing)}")
         print("Please set them in your .env file")
         exit(1)
-    
+
     # Test normal operation
     print("🧪 Testing normal agent operation...\n")
+    # Toggle one of these lines. Comment out the one you don't want.
     result = execute_with_tracing(
-        "Customer OAK-STD-1234 is having network connectivity issues",
-        user_id="lab-test-user"
-    )
+        "Customer OAK-STD-1234 is having network connectivity issues", user_id="lab-test-user")
+    # result = test_vip_contradiction()
     print(f"\nResult: {result}")
-    
-    # Uncomment to test the contradiction bug:
-    # test_vip_contradiction()
