@@ -16,13 +16,37 @@ import pytest
 import sys
 from pathlib import Path
 
-
+from deepeval.models.base_model import DeepEvalBaseLLM
 from deepeval.metrics import AnswerRelevancyMetric, FaithfulnessMetric
 try:
-    from src.agent import build_oak_brook_support_agent
+    from src.agent import build_oak_brook_support_agent, _build_llm, _get_provider_config
 except ModuleNotFoundError:
     sys.path.append(str(Path(__file__).resolve().parents[1]))
-    from src.agent import build_oak_brook_support_agent
+    from src.agent import build_oak_brook_support_agent, _build_llm, _get_provider_config
+
+import os
+
+
+class _ProjectLLM(DeepEvalBaseLLM):
+    """DeepEval judge model backed by the project's .env LLM config."""
+
+    def __init__(self):
+        self._llm = _build_llm()
+        config = _get_provider_config()
+        self._model_name = os.getenv(config["model_env"], config["default_model"])
+
+    def load_model(self):
+        return self._llm
+
+    def generate(self, prompt: str) -> str:
+        return self.load_model().invoke(prompt).content
+
+    async def a_generate(self, prompt: str) -> str:
+        res = await self.load_model().ainvoke(prompt)
+        return res.content
+
+    def get_model_name(self) -> str:
+        return self._model_name
 
 
 def _load_deepeval():
@@ -42,8 +66,9 @@ def _build_oak_brook_support_agent():
     return build_oak_brook_support_agent()
 
 
-answer_relevancy = AnswerRelevancyMetric(threshold=0.7)
-faithfulness = FaithfulnessMetric(threshold=1.0)
+_eval_model = _ProjectLLM()
+answer_relevancy = AnswerRelevancyMetric(threshold=0.7, model=_eval_model)
+faithfulness = FaithfulnessMetric(threshold=1.0, model=_eval_model)
 
 
 # Knowledge base context for faithfulness evaluation
